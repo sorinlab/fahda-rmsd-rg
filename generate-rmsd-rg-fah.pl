@@ -48,10 +48,13 @@ sub calculate_rmsd_rg {
             chdir "CLONE$clone_number";
             print STDOUT "[INFO]  Working on $Project_Dir/RUN$run_number/CLONE$clone_number\n";
 
-            my $rmsd_xvg = generate_xvg("g_rms", $Project_Number, $run_number, $clone_number);
+            my $xtc_file =
+              get_xtc_file("$Path_To_Project_Dir/RUN$run_number/CLONE$clone_number", $Project_Number, $run_number, $clone_number);
+
+            my $rmsd_xvg = generate_xvg("g_rms", $xtc_file, $Project_Number, $run_number, $clone_number);
             my $rmsd_xvg_values = parse_xvg($rmsd_xvg);
 
-            my $rg_xvg = generate_xvg("g_gyrate", $Project_Number, $run_number, $clone_number);
+            my $rg_xvg = generate_xvg("g_gyrate", $xtc_file, $Project_Number, $run_number, $clone_number);
             my $rg_xvg_values = parse_xvg($rg_xvg);
 
             my $rmsd_xvg_frame_count = scalar(keys %$rmsd_xvg_values);
@@ -104,27 +107,13 @@ sub get_max_dir_number {
     return max(@dir_numbers);
 }
 
-sub generate_xvg {
-    my ($g_tools_cmd, $project_number, $run_number, $clone_number) = @_;
-
-    my $xtc_file = "P${project_number}_R${run_number}_C${clone_number}.xtc";    #TODO: might need to call get_xtc_file()
-
-    my $output_suffix = $g_tools_cmd;
-    $output_suffix =~ s/^g_//;
-    my $xvg_file = "P${project_number}_R${run_number}_C${clone_number}_${output_suffix}.xvg";
-
-    my $gmx_cmd = "echo 1 1 | $g_tools_cmd -s $Native_Structure -f $xtc_file -n $Ndx_File -o $xvg_file 2> /dev/null";
-    print STDOUT "[INFO]  Executing `$gmx_cmd`\n";
-    `$gmx_cmd`;
-
-    return $xvg_file;
-}
-
 sub get_xtc_file {
     my ($cwd, $project_number, $run_number, $clone_number) = @_;
 
     my $xtc_file = "P${project_number}_R${run_number}_C${clone_number}.xtc";
     if (-e $xtc_file) { return $xtc_file; }
+
+    print STDOUT "[WARN]  $xtc_file not found; trying to find another one\n";
 
     opendir(my $CWD, $cwd);
     my @xtc_files = grep { /\.xtc$/ } readdir($CWD);
@@ -143,7 +132,23 @@ sub get_xtc_file {
     }
 
     chomp($xtc_file = $xtc_files[0]);
+    print STDOUT "[INFO]  Found $xtc_file\n";
     return $xtc_file;
+}
+
+sub generate_xvg {
+    my ($g_tools_cmd, $xtc_file, $project_number, $run_number, $clone_number) = @_;
+
+    my $output_suffix = $g_tools_cmd;
+    $output_suffix =~ s/^g_//;
+    my $xvg_file = "P${project_number}_R${run_number}_C${clone_number}_${output_suffix}.xvg";
+    if (-e $xvg_file) { return $xvg_file; }
+
+    my $gmx_cmd = "echo 1 1 | $g_tools_cmd -s $Native_Structure -f $xtc_file -n $Ndx_File -o $xvg_file 2> /dev/null";
+    print STDOUT "[INFO]  Executing `$gmx_cmd`\n";
+    `$gmx_cmd`;
+
+    return $xvg_file;
 }
 
 sub parse_xvg {
@@ -161,8 +166,8 @@ sub parse_xvg {
         if ($line =~ m/^#/ or $line =~ m/^@/) { next; }    # ignores comments
         chomp(my @values = split(/\b\s+\b/, $line));
         if (scalar(@values) < 2) { next; }
-        my $time = int($values[0]);                        # time in ps
-        $xvg_values{$time} = $values[1] * 10;              # convert nm to angstrom
+        my $time_in_ps = int($values[0]);
+        $xvg_values{"$time_in_ps"} = $values[1] * 10;      # convert nm to angstrom
     }
     close($XVG);
 
