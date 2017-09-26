@@ -17,7 +17,7 @@ my $Project_Number      = get_project_number($Project_Dir);
 my $Project_Dir_Root    = getcwd();
 my $Path_To_Project_Dir = "$Project_Dir_Root/$Project_Dir";
 
-my $Null_Value_Text = "<NULL>";
+my $NULL_VALUE_TEXT = "<NULL>";
 
 calculate_rmsd_rg();
 
@@ -175,7 +175,7 @@ sub print_to_output_logfile {
     my $rg_xvg_frame_count   = scalar(keys %$rg_xvg_values);
     if ($rmsd_xvg_frame_count != $rg_xvg_frame_count) {
         print STDOUT "[WARN]  There's a difference in frame counts between rms.xvg ($rmsd_xvg_frame_count frames) "
-          . "and gyrate.xvg ($rg_xvg_frame_count frames); any missing value will be shown as $Null_Value_Text\n";
+          . "and gyrate.xvg ($rg_xvg_frame_count frames); any missing value will be shown as $NULL_VALUE_TEXT\n";
     }
 
     open(my $OUTPUT, '>>', $output_logfile) or die "[FATAL]  $output_logfile: $!\n";
@@ -183,8 +183,8 @@ sub print_to_output_logfile {
     my $max_frame = max($rmsd_xvg_frame_count, $rg_xvg_frame_count);
     for (my $frame = 0 ; $frame < $max_frame ; $frame++) {
         my $time_in_ps = $frame * 100;
-        my $rmsd       = (defined $$rmsd_xvg_values{"$time_in_ps"}) ? $$rmsd_xvg_values{"$time_in_ps"} : $Null_Value_Text;
-        my $rg         = (defined $$rg_xvg_values{"$time_in_ps"}) ? $$rg_xvg_values{"$time_in_ps"} : $Null_Value_Text;
+        my $rmsd       = (defined $$rmsd_xvg_values{"$time_in_ps"}) ? $$rmsd_xvg_values{"$time_in_ps"} : $NULL_VALUE_TEXT;
+        my $rg         = (defined $$rg_xvg_values{"$time_in_ps"}) ? $$rg_xvg_values{"$time_in_ps"} : $NULL_VALUE_TEXT;
         printf $OUTPUT "%4d    %4d    %4d    %6d    %.3f    %.3f\n", $Project_Number, $run_number, $clone_number, $time_in_ps,
           $rmsd, $rg;
     }
