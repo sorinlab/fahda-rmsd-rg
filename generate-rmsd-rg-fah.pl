@@ -6,7 +6,11 @@ use Cwd;
 use Getopt::Long qw(HelpMessage :config pass_through);
 use List::Util qw(max);
 
-GetOptions("help|h" => sub { print STDOUT HelpMessage(0); });
+my $Clean_Artifacts = 0;
+GetOptions(
+    "clean-artifacts" => sub { $Clean_Artifacts = 1; },
+    "help|h" => sub { print STDOUT HelpMessage(0); }
+);
 
 my $Project_Dir      = $ARGV[0] or die "[FATAL]  A PROJ* dir must be specified\n";
 my $Ndx_File         = $ARGV[1] or die "[FATAL]  An index file (.ndx) must be specified\n";
@@ -60,9 +64,10 @@ sub calculate_rmsd_rg {
             print_to_output_logfile("$Project_Dir_Root/$Output_Logfile",
                 $run_number, $clone_number, $rmsd_xvg_values, $rg_xvg_values);
 
-            #TODO: Add an option to delete these files
-            #`rm -f $rmsd_output`;
-            #`rm -f $gyrate_output`;
+            if ($Clean_Artifacts) {
+                `rm -f $rmsd_xvg 2> /dev/null`;
+                `rm -f $rg_xvg 2> /dev/null`;
+            }
 
             chdir "..";
         }
@@ -199,6 +204,15 @@ fah-rmsd-rg-calc.pl - calculates RMSD and Rg values for the F@H data
 =head1 SYNOPSIS
 
 fah-rmsd-rg-calc.pl <project_dir> <index.ndx> <topol.gro> <output.log>
+
+=over
+
+=item --clean-artifacts
+
+When specified the generated *.xvg files are removed after the script
+finishes.
+
+=back
 
 IMPORTANT:
 
