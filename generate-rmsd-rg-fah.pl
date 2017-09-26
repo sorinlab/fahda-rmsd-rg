@@ -57,14 +57,8 @@ sub calculate_rmsd_rg {
             my $rg_xvg = generate_xvg("g_gyrate", $xtc_file, $Project_Number, $run_number, $clone_number);
             my $rg_xvg_values = parse_xvg($rg_xvg);
 
-            my $rmsd_xvg_frame_count = scalar(keys %$rmsd_xvg_values);
-            my $rg_xvg_frame_count   = scalar(keys %$rg_xvg_values);
-            if ($rmsd_xvg_frame_count != $rg_xvg_frame_count) {
-                print STDOUT "[WARN]  There's a difference in frame counts between $rmsd_xvg ($rmsd_xvg_frame_count frames) "
-                  . "and $rg_xvg ($rg_xvg_frame_count frames); any missing value will be shown as $Null_Value_Text\n";
-            }
-
-            print_to_output_logfile("$Project_Dir_Root/$Output_Logfile", $rmsd_xvg_values, $rg_xvg_values);
+            print_to_output_logfile("$Project_Dir_Root/$Output_Logfile",
+                $run_number, $clone_number, $rmsd_xvg_values, $rg_xvg_values);
 
             #TODO: Add an option to delete these files
             #`rm -f $rmsd_output`;
@@ -175,14 +169,25 @@ sub parse_xvg {
 }
 
 sub print_to_output_logfile {
+    my ($output_logfile, $run_number, $clone_number, $rmsd_xvg_values, $rg_xvg_values) = @_;
 
-    #TODO: Implement
+    my $rmsd_xvg_frame_count = scalar(keys %$rmsd_xvg_values);
+    my $rg_xvg_frame_count   = scalar(keys %$rg_xvg_values);
+    if ($rmsd_xvg_frame_count != $rg_xvg_frame_count) {
+        print STDOUT "[WARN]  There's a difference in frame counts between rms.xvg ($rmsd_xvg_frame_count frames) "
+          . "and gyrate.xvg ($rg_xvg_frame_count frames); any missing value will be shown as $Null_Value_Text\n";
+    }
 
-    my ($output_logfile, %rmsd_xvg_values, %rg_xvg_values) = @_;
+    open(my $OUTPUT, '>>', $output_logfile) or die "[FATAL]  $output_logfile: $!\n";
 
-    open(my $OUTPUT, '>>', $Output_Logfile) or die "[FATAL]  $Output_Logfile: $!\n";
-
-    # ... print to $OUTPUT here
+    my $max_frame = max($rmsd_xvg_frame_count, $rg_xvg_frame_count);
+    for (my $frame = 0 ; $frame < $max_frame ; $frame++) {
+        my $time_in_ps = $frame * 100;
+        my $rmsd       = (defined $$rmsd_xvg_values{"$time_in_ps"}) ? $$rmsd_xvg_values{"$time_in_ps"} : $Null_Value_Text;
+        my $rg         = (defined $$rg_xvg_values{"$time_in_ps"}) ? $$rg_xvg_values{"$time_in_ps"} : $Null_Value_Text;
+        printf $OUTPUT "%4d    %4d    %4d    %6d    %.3f    %.3f\n", $Project_Number, $run_number, $clone_number, $time_in_ps,
+          $rmsd, $rg;
+    }
 
     close($OUTPUT);
 }
