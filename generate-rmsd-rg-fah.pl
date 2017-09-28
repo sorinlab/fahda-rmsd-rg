@@ -52,13 +52,10 @@ sub calculate_rmsd_rg {
             chdir "CLONE$clone_number";
             print STDOUT "[INFO]  Working on $Project_Dir/RUN$run_number/CLONE$clone_number\n";
 
-            my $xtc_file =
-              get_xtc_file("$Path_To_Project_Dir/RUN$run_number/CLONE$clone_number", $Project_Number, $run_number, $clone_number);
-
-            my $rmsd_xvg = generate_xvg("g_rms", $xtc_file, $Project_Number, $run_number, $clone_number);
+            my $rmsd_xvg = generate_xvg("g_rms", $Project_Number, $run_number, $clone_number);
             my $rmsd_xvg_values = parse_xvg($rmsd_xvg);
 
-            my $rg_xvg = generate_xvg("g_gyrate", $xtc_file, $Project_Number, $run_number, $clone_number);
+            my $rg_xvg = generate_xvg("g_gyrate", $Project_Number, $run_number, $clone_number);
             my $rg_xvg_values = parse_xvg($rg_xvg);
 
             print_to_output_logfile("$Project_Dir_Root/$Output_Logfile",
@@ -136,12 +133,15 @@ sub get_xtc_file {
 }
 
 sub generate_xvg {
-    my ($g_tools_cmd, $xtc_file, $project_number, $run_number, $clone_number) = @_;
+    my ($g_tools_cmd, $project_number, $run_number, $clone_number) = @_;
 
     my $output_suffix = $g_tools_cmd;
     $output_suffix =~ s/^g_//;
     my $xvg_file = "P${project_number}_R${run_number}_C${clone_number}_${output_suffix}.xvg";
     if (-e $xvg_file) { return $xvg_file; }
+
+    my $xtc_file =
+      get_xtc_file("$Path_To_Project_Dir/RUN$run_number/CLONE$clone_number", $project_number, $run_number, $clone_number);
 
     my $gmx_cmd = "echo 1 1 | $g_tools_cmd -s $Native_Structure -f $xtc_file -n $Ndx_File -o $xvg_file 2> /dev/null";
     print STDOUT "[INFO]  Executing `$gmx_cmd`\n";
