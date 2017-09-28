@@ -190,7 +190,7 @@ sub print_to_output_logfile {
         my $time_in_ps = $frame * 100;
         my $rmsd       = (defined $$rmsd_xvg_values{"$time_in_ps"}) ? $$rmsd_xvg_values{"$time_in_ps"} : $NULL_VALUE_TEXT;
         my $rg         = (defined $$rg_xvg_values{"$time_in_ps"}) ? $$rg_xvg_values{"$time_in_ps"} : $NULL_VALUE_TEXT;
-        printf $OUTPUT "%4d    %4d    %4d    %6d    %.3f    %.3f\n", $Project_Number, $run_number, $clone_number, $time_in_ps,
+        printf $OUTPUT "%4d    %4d    %4d    %6d    %7.3f    %7.3f\n", $Project_Number, $run_number, $clone_number, $time_in_ps,
           $rmsd, $rg;
     }
 
