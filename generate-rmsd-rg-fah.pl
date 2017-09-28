@@ -24,6 +24,7 @@ my $Path_To_Project_Dir = "$Project_Dir_Root/$Project_Dir";
 my $NULL_VALUE_TEXT = "<NULL>";
 
 calculate_rmsd_rg();
+print STDOUT "Done!\n";
 
 sub calculate_rmsd_rg {
     chdir $Path_To_Project_Dir;
