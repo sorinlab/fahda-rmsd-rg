@@ -2,9 +2,12 @@
 
 use strict;
 use warnings;
+
 use Cwd;
+use FindBin qw($Bin);
 use Getopt::Long qw(HelpMessage :config pass_through);
-use List::Util qw(max);
+use lib "$Bin/../lib";
+use Share::Fahda;
 
 my $Clean_Artifacts = 0;
 GetOptions(
@@ -35,7 +38,7 @@ sub calculate_rmsd_rg {
         exit(0);
     }
 
-    my $max_run_number = get_max_dir_number(@run_dirs);
+    my $max_run_number = Share::Fahda::get_max_dir_number(@run_dirs);
     for (my $run_number = 0 ; $run_number <= $max_run_number ; $run_number++) {
         if (not -d "RUN$run_number") { next; }
         chdir "RUN$run_number";
@@ -91,17 +94,6 @@ sub get_dirs {
     closedir($ROOT_HANDLE);
 
     return @dirs;
-}
-
-sub get_max_dir_number {
-    my (@dirs) = @_;
-    my @dir_numbers = ();
-    foreach my $dir (@dirs) {
-        my $dir_number = $dir;
-        $dir_number =~ s/^\D+//;
-        push(@dir_numbers, int($dir_number));
-    }
-    return max(@dir_numbers);
 }
 
 sub get_xtc_file {
