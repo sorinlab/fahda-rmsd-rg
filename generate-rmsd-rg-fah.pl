@@ -8,7 +8,8 @@ use FindBin qw($Bin);
 use Getopt::Long qw(HelpMessage :config pass_through);
 use lib "$Bin/../lib";
 use List::Util qw(max);
-use Share::Fahda qw(get_max_dir_number);
+use Share::DirUtil qw(get_dirs);
+use Share::Fahda qw(get_max_dir_number get_xtc_file get_prc_from_clone_path);
 
 my $Clean_Artifacts = 0;
 GetOptions(
@@ -21,19 +22,20 @@ my $Ndx_File         = $ARGV[1] or die "[FATAL]  An index file (.ndx) must be sp
 my $Native_Structure = $ARGV[2] or die "[FATAL]  A starting structure file (.gro) must be specified\n";
 my $Output_Logfile   = $ARGV[3] or die "[FATAL]  An output logfile (.log) must be specified\n";
 
-my $Project_Number      = get_project_number($Project_Dir);
-my $Project_Dir_Root    = getcwd();
-my $Path_To_Project_Dir = "$Project_Dir_Root/$Project_Dir";
-
 my $NULL_VALUE_TEXT = "<NULL>";
 
-calculate_rmsd_rg();
+my $Project_Number   = get_project_number($Project_Dir);
+my $Project_Dir_Root = getcwd();
+my $Project_Path     = "$Project_Dir_Root/$Project_Dir";
+
+calculate_rmsd_rg($Project_Path);
 print STDOUT "Done!\n";
 
 sub calculate_rmsd_rg {
-    chdir $Path_To_Project_Dir;
+    my ($project_path) = @_;
+    chdir $project_path;
 
-    my @run_dirs = get_dirs($Path_To_Project_Dir, "^RUN\\d+\$");
+    my @run_dirs = get_dirs($project_path, '^RUN\d+$');
     if (scalar(@run_dirs) == 0) {
         print STDOUT "[WARN]  No RUN* dirs found\n";
         exit(0);
@@ -41,11 +43,12 @@ sub calculate_rmsd_rg {
 
     my $max_run_number = get_max_dir_number(@run_dirs);
     for (my $run_number = 0 ; $run_number <= $max_run_number ; $run_number++) {
-        if (not -d "RUN$run_number") { next; }
-        chdir "RUN$run_number";
-        print STDOUT "[INFO]  Working on $Project_Dir/RUN$run_number\n";
+        my $run_path = "$project_path/RUN$run_number";
+        if (not -d $run_path) { next; }
+        chdir $run_path;
+        print STDOUT "[INFO]  Working on $run_path\n";
 
-        my @clone_dirs = get_dirs("$Path_To_Project_Dir/RUN$run_number", "^CLONE\\d+\$");
+        my @clone_dirs = get_dirs($run_path, '^CLONE\d+$');
         if (scalar(@clone_dirs) == 0) {
             print STDOUT "[WARN]  No CLONE* dirs found\n";
             next;
@@ -53,15 +56,16 @@ sub calculate_rmsd_rg {
 
         my $max_clone_number = get_max_dir_number(@clone_dirs);
         for (my $clone_number = 0 ; $clone_number <= $max_clone_number ; $clone_number++) {
-            if (not -d "CLONE$clone_number") { next; }
-            chdir "CLONE$clone_number";
-            print STDOUT "[INFO]  Working on $Project_Dir/RUN$run_number/CLONE$clone_number\n";
+            my $clone_path = "$run_path/CLONE$clone_number";
+            if (not -d $clone_path) { next; }
+            chdir $clone_path;
+            print STDOUT "[INFO]  Working on $clone_path\n";
 
-            my $rmsd_xvg = generate_xvg("g_rms", $Project_Number, $run_number, $clone_number);
-            my $rmsd_xvg_values = parse_xvg($rmsd_xvg);
+            my $rmsd_xvg = generate_xvg("g_rms", $clone_path);
+            my $rmsd_xvg_values = parse_xvg("$clone_path/$rmsd_xvg");
 
-            my $rg_xvg = generate_xvg("g_gyrate", $Project_Number, $run_number, $clone_number);
-            my $rg_xvg_values = parse_xvg($rg_xvg);
+            my $rg_xvg = generate_xvg("g_gyrate", $clone_path);
+            my $rg_xvg_values = parse_xvg("$clone_path/$rg_xvg");
 
             print_to_output_logfile("$Project_Dir_Root/$Output_Logfile",
                 $run_number, $clone_number, $rmsd_xvg_values, $rg_xvg_values);
@@ -85,60 +89,19 @@ sub get_project_number {
     return $project_dir;
 }
 
-sub get_dirs {
-    my ($root, $match_pattern) = @_;
-    if (not -d $root) { return; }
-    if ($root !~ m/\/$/) { $root .= "/"; }
-
-    opendir(my $ROOT_HANDLE, $root);
-    my @dirs = grep { -d "$root$_" && /$match_pattern/ } readdir($ROOT_HANDLE);
-    closedir($ROOT_HANDLE);
-
-    return @dirs;
-}
-
-sub get_xtc_file {
-    my ($cwd, $project_number, $run_number, $clone_number) = @_;
-
-    my $xtc_file = "P${project_number}_R${run_number}_C${clone_number}.xtc";
-    if (-e $xtc_file) { return $xtc_file; }
-
-    print STDOUT "[WARN]  $xtc_file not found; trying to find another one\n";
-
-    opendir(my $CWD, $cwd);
-    my @xtc_files = grep { /\.xtc$/ } readdir($CWD);
-    closedir($CWD);
-
-    if (scalar(@xtc_files) == 0) {
-        print STDOUT "[WARN]  No XTC file found\n";
-        return;
-    }
-
-    if (scalar(@xtc_files) > 1) {
-        print STDOUT "[WARN]  More than one XTC file found; ";
-        chomp($xtc_file = $xtc_files[0]);
-        print STDOUT "using the first one: $xtc_file\n";
-        return $xtc_file;
-    }
-
-    chomp($xtc_file = $xtc_files[0]);
-    print STDOUT "[INFO]  Found $xtc_file\n";
-    return $xtc_file;
-}
-
 sub generate_xvg {
-    my ($g_tools_cmd, $project_number, $run_number, $clone_number) = @_;
+    my ($g_tools_cmd, $clone_path) = @_;
 
     my $output_suffix = $g_tools_cmd;
     $output_suffix =~ s/^g_//;
+
+    my ($project_number, $run_number, $clone_number) = get_prc_from_clone_path($clone_path);
     my $xvg_file = "P${project_number}_R${run_number}_C${clone_number}_${output_suffix}.xvg";
     if (-e $xvg_file) { return $xvg_file; }
 
-    my $xtc_file =
-      get_xtc_file("$Path_To_Project_Dir/RUN$run_number/CLONE$clone_number", $project_number, $run_number, $clone_number);
-
+    my $xtc_file = get_xtc_file($clone_path);
+    if (not defined $xtc_file) { return; }
     my $gmx_cmd = "echo 1 1 | $g_tools_cmd -s $Native_Structure -f $xtc_file -n $Ndx_File -o $xvg_file 2> /dev/null";
-    print STDOUT "[INFO]  Executing `$gmx_cmd`\n";
     `$gmx_cmd`;
 
     return $xvg_file;
@@ -146,12 +109,7 @@ sub generate_xvg {
 
 sub parse_xvg {
     my ($xvg) = @_;
-
-    if (not -e $xvg) {
-
-        print STDOUT "[WARN]  $xvg does not exist\n";
-        return;
-    }
+    if (not -e $xvg) { return; }
 
     my %xvg_values = ();    # time_in_ps => rmsd_in_angstrom
     open(my $XVG, '<', $xvg);
