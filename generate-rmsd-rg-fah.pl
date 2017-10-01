@@ -7,7 +7,8 @@ use Cwd;
 use FindBin qw($Bin);
 use Getopt::Long qw(HelpMessage :config pass_through);
 use lib "$Bin/../lib";
-use Share::Fahda;
+use List::Util qw(max);
+use Share::Fahda qw(get_max_dir_number);
 
 my $Clean_Artifacts = 0;
 GetOptions(
@@ -38,7 +39,7 @@ sub calculate_rmsd_rg {
         exit(0);
     }
 
-    my $max_run_number = Share::Fahda::get_max_dir_number(@run_dirs);
+    my $max_run_number = get_max_dir_number(@run_dirs);
     for (my $run_number = 0 ; $run_number <= $max_run_number ; $run_number++) {
         if (not -d "RUN$run_number") { next; }
         chdir "RUN$run_number";
