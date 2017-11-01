@@ -18,6 +18,18 @@ $ head output.log
 ...
 ```
 
+## Download
+
+Download a zip ball of the source code from [here](https://github.com/sorinlab/fahda-rmsd-rg/archive/master.zip).
+
+You can also use the `git clone` command as followed.
+
+```bash
+git clone https://github.com/sorinlab/fahda-rmsd-rg
+git submodule init
+git submodule update
+```
+
 ## Usage
 
 ```bash
