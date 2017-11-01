@@ -151,11 +151,11 @@ sub print_to_output_logfile {
 
 =head1 NAME
 
-calc-rmsd-rg.pl - calculates RMSD and Rg values for the F@H data
+rmsd-rg-calc.pl - calculates RMSD and Rg values for the F@H data
 
 =head1 SYNOPSIS
 
-calc-rmsd-rg.pl <project_dir> <index.ndx> <topol.gro> <output.log>
+rmsd-rg-calc.pl <project_dir> <index.ndx> <topol.gro> <output.log>
 
 =over
 
