@@ -26,6 +26,7 @@ You can also use the `git clone` command as followed.
 
 ```bash
 git clone https://github.com/sorinlab/fahda-rmsd-rg
+cd fahda-rmsd-rg
 git submodule init
 git submodule update
 ```
